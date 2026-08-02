@@ -22,63 +22,11 @@ async function callSmskody(params) {
 app.get('/', (req, res) => {
   res.json({
     name: "SMSKody",
-    description: "SMSKody temporary numbers",
-    version: "1.0.0",
-    author: "Custom",
-    priceFormat: "USD",
-    credentials: [
-      {
-        name: "apiKey",
-        label: "API Key",
-        description: "Leave empty",
-        required: false
-      }
-    ],
+    version: "1.0",
     tempApi: {
-      userDataFields: [
-        {
-          name: "service",
-          label: "Service",
-          description: "wa, go, ig, ds, tg, tw",
-          required: true
-        }
-      ],
-      userDataConfigs: [
-        { name: "WhatsApp", values: { service: "wa" } },
-        { name: "Google", values: { service: "go" } },
-        { name: "Instagram", values: { service: "ig" } },
-        { name: "Discord", values: { service: "ds" } },
-        { name: "Telegram", values: { service: "tg" } },
-        { name: "Twitter/X", values: { service: "tw" } }
-      ],
-      getPhoneNumber: {
-        method: "GET",
-        url: MY_DOMAIN + "/getNumber?service=${userData.service}",
-        responseType: "JSON",
-        responseMapping: {
-          phoneNumber: "$.phoneNumber",
-          orderId: "$.orderId"
-        }
-      },
-      getMessage: {
-        method: "GET",
-        url: MY_DOMAIN + "/getStatus?id=${session.orderId}",
-        responseType: "JSON",
-        responseMapping: {
-          message: "$.message"
-        },
-        pendingCheck: {
-          type: "JSON_PATH",
-          path: "$.status",
-          value: "waiting"
-        },
-        pollingIntervalSeconds: 5
-      },
-      cancelPhoneNumber: {
-        method: "GET",
-        url: MY_DOMAIN + "/setStatus?id=${session.orderId}&status=8",
-        responseType: "JSON"
-      }
+      getPhoneNumber: MY_DOMAIN + "/getNumber",
+      getMessage: MY_DOMAIN + "/getStatus",
+      cancelPhoneNumber: MY_DOMAIN + "/setStatus"
     }
   });
 });
@@ -87,12 +35,31 @@ app.get('/getNumber', async (req, res) => {
   const service = req.query.service || 'wa';
   const text = await callSmskody({ action: 'getNumber', service });
 
+  console.log('Raw from SMSKody:', text);
+
   if (text.startsWith('ACCESS_NUMBER:')) {
+    // More careful split
     const parts = text.split(':');
-    let number = parts[2] || '';
-    if (number && !number.startsWith('+')) number = '+' + number;
-    return res.json({ phoneNumber: number, orderId: parts[1] || '' });
+    
+    // parts[0] = "ACCESS_NUMBER"
+    // parts[1] = orderId
+    // parts[2] and after = the number (in case number has extra colons)
+    
+    const orderId = parts[1] || '';
+    let number = parts.slice(2).join(':') || '';  // join in case of extra colons
+    
+    // Clean number
+    number = number.replace(/[^0-9+]/g, '');
+    if (number && !number.startsWith('+')) {
+      number = '+' + number;
+    }
+
+    return res.json({
+      phoneNumber: number,
+      orderId: orderId
+    });
   }
+
   res.status(400).json({ error: text });
 });
 
