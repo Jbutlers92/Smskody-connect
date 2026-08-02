@@ -14,15 +14,15 @@ async function callSmskody(params) {
   return String(data).trim();
 }
 
-// Schema that AYCD accepts
+// Schema endpoint
 app.get('/', (req, res) => {
   res.json({
     name: "SMSKody",
     version: "1.0",
     tempApi: {
-      getNumber: "/getNumber",
-      getStatus: "/getStatus",
-      setStatus: "/setStatus"
+      getPhoneNumber: "/getNumber",
+      getMessage: "/getStatus",
+      cancelPhoneNumber: "/setStatus"
     }
   });
 });
@@ -32,62 +32,129 @@ app.get('/schema', (req, res) => {
     name: "SMSKody",
     version: "1.0",
     tempApi: {
-      getNumber: "/getNumber",
-      getStatus: "/getStatus",
-      setStatus: "/setStatus"
+      getPhoneNumber: "/getNumber",
+      getMessage: "/getStatus",
+      cancelPhoneNumber: "/setStatus"
     }
   });
 });
 
-// Get a phone number
+// Get phone number - returns clean JSON for AYCD
 app.post('/getNumber', async (req, res) => {
   try {
-    const service = req.body.service || 'wa';
+    const service = req.body.service || req.query.service || 'wa';
     const text = await callSmskody({ action: 'getNumber', service });
 
     if (text.startsWith('ACCESS_NUMBER:')) {
       const parts = text.split(':');
+      const orderId = parts[1];
+      let phoneNumber = parts[2];
+      if (!phoneNumber.startsWith('+')) phoneNumber = '+' + phoneNumber;
+
       return res.json({
-        success: true,
-        id: parts[1],
-        number: parts[2].startsWith('+') ? parts[2] : '+' + parts[2]
+        phoneNumber: phoneNumber,
+        orderId: orderId
       });
     }
 
-    res.status(400).json({ success: false, error: text });
+    res.status(400).json({ error: text });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Check status / get code
-app.post('/getStatus', async (req, res) => {
+// Also support GET for the same endpoint
+app.get('/getNumber', async (req, res) => {
   try {
-    const id = req.body.id;
+    const service = req.query.service || 'wa';
+    const text = await callSmskody({ action: 'getNumber', service });
+
+    if (text.startsWith('ACCESS_NUMBER:')) {
+      const parts = text.split(':');
+      const orderId = parts[1];
+      let phoneNumber = parts[2];
+      if (!phoneNumber.startsWith('+')) phoneNumber = '+' + phoneNumber;
+
+      return res.json({
+        phoneNumber: phoneNumber,
+        orderId: orderId
+      });
+    }
+
+    res.status(400).json({ error: text });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get status / message
+app.get('/getStatus', async (req, res) => {
+  try {
+    const id = req.query.id || req.query.orderId;
     const text = await callSmskody({ action: 'getStatus', id });
 
     if (text.startsWith('STATUS_OK:')) {
-      return res.json({ success: true, status: 'ready', code: text.split(':')[1] });
+      const code = text.split(':')[1];
+      return res.json({
+        message: code,
+        code: code,
+        status: 'ready'
+      });
     }
 
-    if (text.includes('WAIT')) {
-      return res.json({ success: true, status: 'waiting', code: null });
-    }
-
-    res.json({ success: false, error: text });
+    // Still waiting
+    res.json({
+      message: text,
+      status: 'waiting'
+    });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Set status
-app.post('/setStatus', async (req, res) => {
+app.post('/getStatus', async (req, res) => {
   try {
-    const { id, status } = req.body;
+    const id = req.body.id || req.body.orderId;
+    const text = await callSmskody({ action: 'getStatus', id });
+
+    if (text.startsWith('STATUS_OK:')) {
+      const code = text.split(':')[1];
+      return res.json({
+        message: code,
+        code: code,
+        status: 'ready'
+      });
+    }
+
+    res.json({
+      message: text,
+      status: 'waiting'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Cancel
+app.get('/setStatus', async (req, res) => {
+  try {
+    const id = req.query.id || req.query.orderId;
+    const status = req.query.status || 8;
     const text = await callSmskody({ action: 'setStatus', id, status });
     res.json({ success: true, raw: text });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/setStatus', async (req, res) => {
+  try {
+    const id = req.body.id || req.body.orderId;
+    const status = req.body.status || 8;
+    const text = await callSmskody({ action: 'setStatus', id, status });
+    res.json({ success: true, raw: text });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
