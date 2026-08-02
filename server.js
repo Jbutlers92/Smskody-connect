@@ -5,6 +5,7 @@ app.use(express.json());
 
 const SMSKODY_KEY = process.env.SMSKODY_KEY || '';
 const BASE = 'https://smskody.com/api/ext';
+const MY_DOMAIN = 'https://resplendent-forgiveness-production-aaae.up.railway.app';
 
 async function callSmskody(params) {
   try {
@@ -18,11 +19,22 @@ async function callSmskody(params) {
   }
 }
 
-app.get('/', (req, res) => res.json({ name: "SMSKody", version: "1.0" }));
+app.get('/', (req, res) => {
+  res.json({
+    name: "SMSKody",
+    version: "1.0",
+    tempApi: {
+      getPhoneNumber: MY_DOMAIN + "/getNumber",
+      getMessage: MY_DOMAIN + "/getStatus",
+      cancelPhoneNumber: MY_DOMAIN + "/setStatus"
+    }
+  });
+});
 
 app.get('/getNumber', async (req, res) => {
   const service = req.query.service || 'wa';
   const text = await callSmskody({ action: 'getNumber', service });
+
   if (text.startsWith('ACCESS_NUMBER:')) {
     const parts = text.split(':');
     let number = parts[2] || '';
@@ -35,17 +47,20 @@ app.get('/getNumber', async (req, res) => {
 app.get('/getStatus', async (req, res) => {
   const id = req.query.id || '';
   const text = await callSmskody({ action: 'getStatus', id });
+
   if (text.startsWith('STATUS_OK:')) {
-    return res.json({ message: text.split(':')[1] || '', status: 'ready' });
+    const code = text.split(':')[1] || '';
+    return res.json({ message: code, code: code, status: 'ready' });
   }
   res.json({ message: text, status: 'waiting' });
 });
 
 app.get('/setStatus', async (req, res) => {
   const id = req.query.id || '';
-  const text = await callSmskody({ action: 'setStatus', id, status: req.query.status || '8' });
-  res.json({ success: true });
+  const status = req.query.status || '8';
+  const text = await callSmskody({ action: 'setStatus', id, status });
+  res.json({ success: true, raw: text });
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log('Running'));
+app.listen(port, () => console.log('Running on port ' + port));
