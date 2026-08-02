@@ -22,45 +22,5 @@ async function callSmskody(params) {
 app.get('/', (req, res) => {
   res.json({
     name: "SMSKody",
-    version: "1.0",
-    tempApi: {
-      getPhoneNumber: MY_DOMAIN + "/getNumber",
-      getMessage: MY_DOMAIN + "/getStatus",
-      cancelPhoneNumber: MY_DOMAIN + "/setStatus"
-    }
-  });
-});
-
-app.get('/getNumber', async (req, res) => {
-  const service = req.query.service || 'wa';
-  const text = await callSmskody({ action: 'getNumber', service });
-
-  if (text.startsWith('ACCESS_NUMBER:')) {
-    const parts = text.split(':');
-    let number = parts[2] || '';
-    if (number && !number.startsWith('+')) number = '+' + number;
-    return res.json({ phoneNumber: number, orderId: parts[1] || '' });
-  }
-  res.status(400).json({ error: text });
-});
-
-app.get('/getStatus', async (req, res) => {
-  const id = req.query.id || '';
-  const text = await callSmskody({ action: 'getStatus', id });
-
-  if (text.startsWith('STATUS_OK:')) {
-    const code = text.split(':')[1] || '';
-    return res.json({ message: code, code: code, status: 'ready' });
-  }
-  res.json({ message: text, status: 'waiting' });
-});
-
-app.get('/setStatus', async (req, res) => {
-  const id = req.query.id || '';
-  const status = req.query.status || '8';
-  const text = await callSmskody({ action: 'setStatus', id, status });
-  res.json({ success: true, raw: text });
-});
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log('Running on port ' + port));
+    description: "SMSKody temporary numbers",
+    version: "1
