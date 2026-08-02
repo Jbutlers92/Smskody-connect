@@ -39,4 +39,27 @@ app.get('/getNumber', async (req, res) => {
     const parts = text.split(':');
     let number = parts[2] || '';
     if (number && !number.startsWith('+')) number = '+' + number;
-    return res.json
+    return res.json({ phoneNumber: number, orderId: parts[1] || '' });
+  }
+  res.status(400).json({ error: text });
+});
+
+app.get('/getStatus', async (req, res) => {
+  const id = req.query.id || '';
+  const text = await callSmskody({ action: 'getStatus', id });
+
+  if (text.startsWith('STATUS_OK:')) {
+    return res.json({ message: text.split(':')[1] || '', status: 'ready' });
+  }
+  res.json({ message: text, status: 'waiting' });
+});
+
+app.get('/setStatus', async (req, res) => {
+  const id = req.query.id || '';
+  const status = req.query.status || '8';
+  const text = await callSmskody({ action: 'setStatus', id, status });
+  res.json({ success: true, raw: text });
+});
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log('Running on port ' + port));
