@@ -14,6 +14,31 @@ async function callSmskody(params) {
   return String(data).trim();
 }
 
+// Basic schema so AYCD stops giving 404
+app.get('/', (req, res) => {
+  res.json({
+    name: "SMSKody Connector",
+    version: "1.0",
+    endpoints: {
+      getNumber: "/getNumber",
+      getStatus: "/getStatus",
+      setStatus: "/setStatus"
+    }
+  });
+});
+
+app.get('/schema', (req, res) => {
+  res.json({
+    name: "SMSKody Connector",
+    version: "1.0",
+    endpoints: {
+      getNumber: "/getNumber",
+      getStatus: "/getStatus",
+      setStatus: "/setStatus"
+    }
+  });
+});
+
 // Get a phone number
 app.post('/getNumber', async (req, res) => {
   try {
@@ -22,12 +47,10 @@ app.post('/getNumber', async (req, res) => {
 
     if (text.startsWith('ACCESS_NUMBER:')) {
       const parts = text.split(':');
-      const id = parts[1];
-      const number = parts[2];
       return res.json({
         success: true,
-        id: id,
-        number: number.startsWith('+') ? number : '+' + number
+        id: parts[1],
+        number: parts[2].startsWith('+') ? parts[2] : '+' + parts[2]
       });
     }
 
@@ -37,18 +60,17 @@ app.post('/getNumber', async (req, res) => {
   }
 });
 
-// Check if the code arrived
+// Check status / get code
 app.post('/getStatus', async (req, res) => {
   try {
     const id = req.body.id;
     const text = await callSmskody({ action: 'getStatus', id });
 
     if (text.startsWith('STATUS_OK:')) {
-      const code = text.split(':')[1];
-      return res.json({ success: true, status: 'ready', code: code });
+      return res.json({ success: true, status: 'ready', code: text.split(':')[1] });
     }
 
-    if (text === 'STATUS_WAIT_CODE' || text.includes('WAIT')) {
+    if (text.includes('WAIT')) {
       return res.json({ success: true, status: 'waiting', code: null });
     }
 
@@ -58,7 +80,7 @@ app.post('/getStatus', async (req, res) => {
   }
 });
 
-// Mark number as used or cancel it
+// Set status
 app.post('/setStatus', async (req, res) => {
   try {
     const { id, status } = req.body;
@@ -70,4 +92,4 @@ app.post('/setStatus', async (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log('Connector is running on port', port));
+app.listen(port, () => console.log('Connector running on port', port));
