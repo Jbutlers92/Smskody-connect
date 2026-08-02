@@ -35,31 +35,12 @@ app.get('/getNumber', async (req, res) => {
   const service = req.query.service || 'wa';
   const text = await callSmskody({ action: 'getNumber', service });
 
-  console.log('Raw from SMSKody:', text);
-
   if (text.startsWith('ACCESS_NUMBER:')) {
-    // More careful split
     const parts = text.split(':');
-    
-    // parts[0] = "ACCESS_NUMBER"
-    // parts[1] = orderId
-    // parts[2] and after = the number (in case number has extra colons)
-    
-    const orderId = parts[1] || '';
-    let number = parts.slice(2).join(':') || '';  // join in case of extra colons
-    
-    // Clean number
-    number = number.replace(/[^0-9+]/g, '');
-    if (number && !number.startsWith('+')) {
-      number = '+' + number;
-    }
-
-    return res.json({
-      phoneNumber: number,
-      orderId: orderId
-    });
+    let number = parts[2] || '';
+    if (number && !number.startsWith('+')) number = '+' + number;
+    return res.json({ phoneNumber: number, orderId: parts[1] || '' });
   }
-
   res.status(400).json({ error: text });
 });
 
