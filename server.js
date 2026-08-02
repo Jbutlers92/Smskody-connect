@@ -14,12 +14,12 @@ async function callSmskody(params) {
   return String(data).trim();
 }
 
-// Basic schema so AYCD stops giving 404
+// Schema that AYCD accepts
 app.get('/', (req, res) => {
   res.json({
-    name: "SMSKody Connector",
+    name: "SMSKody",
     version: "1.0",
-    endpoints: {
+    tempApi: {
       getNumber: "/getNumber",
       getStatus: "/getStatus",
       setStatus: "/setStatus"
@@ -29,9 +29,9 @@ app.get('/', (req, res) => {
 
 app.get('/schema', (req, res) => {
   res.json({
-    name: "SMSKody Connector",
+    name: "SMSKody",
     version: "1.0",
-    endpoints: {
+    tempApi: {
       getNumber: "/getNumber",
       getStatus: "/getStatus",
       setStatus: "/setStatus"
