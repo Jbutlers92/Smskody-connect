@@ -1,12 +1,23 @@
-{
-  "name": "smskody-connector",
-  "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "axios": "^1.6.0"
-  }
+const express = require('express');
+const axios = require('axios');
+const app = express();
+app.use(express.json());
+
+const SMSKODY_KEY = process.env.SMSKODY_KEY;
+const BASE = 'https://smskody.com/api/ext';
+
+async function callSmskody(params) {
+  const { data } = await axios.get(BASE, {
+    params: { api_key: SMSKODY_KEY, ...params },
+    timeout: 15000
+  });
+  return String(data).trim();
 }
+
+// Schema that AYCD accepts
+app.get('/', (req, res) => {
+  res.json({
+    name: "SMSKody",
+    version: "1.0",
+    tempApi: {
+      getNumber: "/
