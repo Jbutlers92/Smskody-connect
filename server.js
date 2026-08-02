@@ -24,6 +24,8 @@ app.get('/getNumber', async (req, res) => {
   const service = req.query.service || 'wa';
   const text = await callSmskody({ action: 'getNumber', service });
 
+  console.log('getNumber response:', text);
+
   if (text.startsWith('ACCESS_NUMBER:')) {
     const parts = text.split(':');
     let number = parts[2] || '';
@@ -35,13 +37,24 @@ app.get('/getNumber', async (req, res) => {
 
 app.get('/getStatus', async (req, res) => {
   const id = req.query.id || '';
+  console.log('getStatus called with id:', id);
+
   const text = await callSmskody({ action: 'getStatus', id });
+  console.log('getStatus raw response:', text);
 
   if (text.startsWith('STATUS_OK:')) {
     const code = text.split(':')[1] || '';
-    return res.json({ message: code, code: code, status: 'ready' });
+    return res.json({
+      message: code,
+      code: code,
+      status: 'ready'
+    });
   }
-  res.json({ message: text, status: 'waiting' });
+
+  res.json({
+    message: text,
+    status: 'waiting'
+  });
 });
 
 app.get('/setStatus', async (req, res) => {
